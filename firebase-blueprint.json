@@ -1,0 +1,341 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private profile and emergency details for a SHE-GUARD user, structured for web and Android compatibility.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Authentication user ID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "fullName": {
+          "type": "string",
+          "description": "User full name.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified account email address.",
+          "minLength": 3,
+          "maxLength": 150
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "User primary phone number.",
+          "maxLength": 32
+        },
+        "bloodGroup": {
+          "type": "string",
+          "description": "Optional blood group for emergency responders.",
+          "maxLength": 16
+        },
+        "medicalNotes": {
+          "type": "string",
+          "description": "Allergies, medications, or critical medical notes.",
+          "maxLength": 500
+        },
+        "homeAddress": {
+          "type": "string",
+          "description": "Home or safe residence address.",
+          "maxLength": 250
+        },
+        "emergencyMessage": {
+          "type": "string",
+          "description": "Default custom SOS message template.",
+          "maxLength": 300
+        },
+        "platform": {
+          "type": "string",
+          "enum": ["web", "android"],
+          "description": "Client platform that last updated the profile."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": ["uid", "fullName", "email", "phoneNumber", "platform", "createdAt", "updatedAt"]
+    },
+    "TrustedContact": {
+      "title": "TrustedContact",
+      "description": "Emergency trusted contact belonging to a specific user.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Document identifier.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase UID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Trusted contact display name.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "phone": {
+          "type": "string",
+          "description": "Trusted contact phone number.",
+          "minLength": 3,
+          "maxLength": 32
+        },
+        "relationship": {
+          "type": "string",
+          "description": "Relationship such as Mother, Sister, Friend.",
+          "maxLength": 60
+        },
+        "priority": {
+          "type": "integer",
+          "description": "Display and outreach priority order (1-10)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": ["id", "userId", "name", "phone", "relationship", "priority", "createdAt", "updatedAt"]
+    },
+    "SosAlert": {
+      "title": "SosAlert",
+      "description": "Permanent record of an SOS emergency alert triggered by the user.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "SOS alert document ID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase UID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "dateLabel": {
+          "type": "string",
+          "description": "Formatted date of the alert.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "timeLabel": {
+          "type": "string",
+          "description": "Formatted time of the alert.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "latitude": {
+          "type": "number",
+          "description": "GPS latitude when captured."
+        },
+        "longitude": {
+          "type": "number",
+          "description": "GPS longitude when captured."
+        },
+        "accuracyMeters": {
+          "type": "number",
+          "description": "Estimated GPS accuracy in meters."
+        },
+        "locationAvailable": {
+          "type": "boolean",
+          "description": "Whether browser geolocation coordinates were captured."
+        },
+        "mapsUrl": {
+          "type": "string",
+          "description": "Google Maps coordinate link.",
+          "maxLength": 300
+        },
+        "locationSummary": {
+          "type": "string",
+          "description": "Human-readable location status or coordinates summary.",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "triggerSource": {
+          "type": "string",
+          "enum": ["manual_sos", "journey_missed_checkin"],
+          "description": "Source action that initiated the SOS confirmation."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["recorded", "resolved"],
+          "description": "Current alert lifecycle state."
+        },
+        "message": {
+          "type": "string",
+          "description": "Emergency note attached to the alert.",
+          "maxLength": 300
+        },
+        "contactedCount": {
+          "type": "integer",
+          "description": "Number of trusted contacts prepared for outreach."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "dateLabel",
+        "timeLabel",
+        "latitude",
+        "longitude",
+        "accuracyMeters",
+        "locationAvailable",
+        "mapsUrl",
+        "locationSummary",
+        "triggerSource",
+        "status",
+        "message",
+        "contactedCount",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "JourneySession": {
+      "title": "JourneySession",
+      "description": "Active or past safety journey monitoring session with check-in reminders.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Journey document ID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase UID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "description": "Journey label such as Evening Commute.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "destination": {
+          "type": "string",
+          "description": "Intended destination.",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "expectedArrivalAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Expected arrival ISO timestamp.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "checkInIntervalMinutes": {
+          "type": "integer",
+          "description": "Check-in reminder interval in minutes."
+        },
+        "nextCheckInAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Next scheduled check-in ISO timestamp.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "lastCheckInAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Most recent safety check-in ISO timestamp.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "missedCheckInCount": {
+          "type": "integer",
+          "description": "Count of missed check-ins during this journey."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "checkin_missed", "completed", "escalated"],
+          "description": "Journey monitoring status."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "title",
+        "destination",
+        "expectedArrivalAt",
+        "checkInIntervalMinutes",
+        "nextCheckInAt",
+        "lastCheckInAt",
+        "missedCheckInCount",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user profile and emergency details isolated per authenticated user."
+    },
+    "/users/{userId}/trustedContacts/{contactId}": {
+      "schema": { "$ref": "#/entities/TrustedContact" },
+      "description": "User-owned emergency trusted contacts."
+    },
+    "/users/{userId}/sosAlerts/{alertId}": {
+      "schema": { "$ref": "#/entities/SosAlert" },
+      "description": "Permanent user-owned SOS emergency alert logs."
+    },
+    "/users/{userId}/journeys/{journeyId}": {
+      "schema": { "$ref": "#/entities/JourneySession" },
+      "description": "User-owned safety journey monitoring sessions."
+    }
+  }
+}

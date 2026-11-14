@@ -1,0 +1,358 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core hardened primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isVerifiedOwner(userId) {
+      return isVerified() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function parentUserExists(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId));
+    }
+
+    // Entity validation helpers
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll([
+        'uid',
+        'fullName',
+        'email',
+        'phoneNumber',
+        'platform',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'uid',
+        'fullName',
+        'email',
+        'phoneNumber',
+        'bloodGroup',
+        'medicalNotes',
+        'homeAddress',
+        'emergencyMessage',
+        'platform',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      isValidId(data.uid) &&
+      data.uid == userId &&
+      data.uid == request.auth.uid &&
+      data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 100 &&
+      data.email is string && data.email.size() >= 3 && data.email.size() <= 150 &&
+      data.phoneNumber is string && data.phoneNumber.size() <= 32 &&
+      (!('bloodGroup' in data) || (data.bloodGroup is string && data.bloodGroup.size() <= 16)) &&
+      (!('medicalNotes' in data) || (data.medicalNotes is string && data.medicalNotes.size() <= 500)) &&
+      (!('homeAddress' in data) || (data.homeAddress is string && data.homeAddress.size() <= 250)) &&
+      (!('emergencyMessage' in data) || (data.emergencyMessage is string && data.emergencyMessage.size() <= 300)) &&
+      data.platform in ['web', 'android'] &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidTrustedContact(data, userId, contactId) {
+      return data.keys().hasAll([
+        'id',
+        'userId',
+        'name',
+        'phone',
+        'relationship',
+        'priority',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id',
+        'userId',
+        'name',
+        'phone',
+        'relationship',
+        'priority',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      isValidId(data.id) &&
+      data.id == contactId &&
+      isValidId(data.userId) &&
+      data.userId == userId &&
+      data.userId == request.auth.uid &&
+      data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+      data.phone is string && data.phone.size() >= 3 && data.phone.size() <= 32 &&
+      data.relationship is string && data.relationship.size() <= 60 &&
+      data.priority is int && data.priority >= 1 && data.priority <= 10 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidSosAlert(data, userId, alertId) {
+      return data.keys().hasAll([
+        'id',
+        'userId',
+        'dateLabel',
+        'timeLabel',
+        'latitude',
+        'longitude',
+        'accuracyMeters',
+        'locationAvailable',
+        'mapsUrl',
+        'locationSummary',
+        'triggerSource',
+        'status',
+        'message',
+        'contactedCount',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id',
+        'userId',
+        'dateLabel',
+        'timeLabel',
+        'latitude',
+        'longitude',
+        'accuracyMeters',
+        'locationAvailable',
+        'mapsUrl',
+        'locationSummary',
+        'triggerSource',
+        'status',
+        'message',
+        'contactedCount',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      isValidId(data.id) &&
+      data.id == alertId &&
+      isValidId(data.userId) &&
+      data.userId == userId &&
+      data.userId == request.auth.uid &&
+      data.dateLabel is string && data.dateLabel.size() >= 1 && data.dateLabel.size() <= 40 &&
+      data.timeLabel is string && data.timeLabel.size() >= 1 && data.timeLabel.size() <= 40 &&
+      data.latitude is number && data.latitude >= -90 && data.latitude <= 90 &&
+      data.longitude is number && data.longitude >= -180 && data.longitude <= 180 &&
+      data.accuracyMeters is number && data.accuracyMeters >= 0 && data.accuracyMeters <= 1000000 &&
+      data.locationAvailable is bool &&
+      data.mapsUrl is string && data.mapsUrl.size() <= 300 &&
+      data.locationSummary is string && data.locationSummary.size() >= 1 && data.locationSummary.size() <= 200 &&
+      data.triggerSource in ['manual_sos', 'journey_missed_checkin'] &&
+      data.status in ['recorded', 'resolved'] &&
+      data.message is string && data.message.size() <= 300 &&
+      data.contactedCount is int && data.contactedCount >= 0 && data.contactedCount <= 50 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidJourney(data, userId, journeyId) {
+      return data.keys().hasAll([
+        'id',
+        'userId',
+        'title',
+        'destination',
+        'expectedArrivalAt',
+        'checkInIntervalMinutes',
+        'nextCheckInAt',
+        'lastCheckInAt',
+        'missedCheckInCount',
+        'status',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id',
+        'userId',
+        'title',
+        'destination',
+        'expectedArrivalAt',
+        'checkInIntervalMinutes',
+        'nextCheckInAt',
+        'lastCheckInAt',
+        'missedCheckInCount',
+        'status',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      isValidId(data.id) &&
+      data.id == journeyId &&
+      isValidId(data.userId) &&
+      data.userId == userId &&
+      data.userId == request.auth.uid &&
+      data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+      data.destination is string && data.destination.size() >= 1 && data.destination.size() <= 200 &&
+      data.expectedArrivalAt is string && data.expectedArrivalAt.size() >= 1 && data.expectedArrivalAt.size() <= 40 &&
+      data.checkInIntervalMinutes is int && data.checkInIntervalMinutes >= 5 && data.checkInIntervalMinutes <= 240 &&
+      data.nextCheckInAt is string && data.nextCheckInAt.size() >= 1 && data.nextCheckInAt.size() <= 40 &&
+      data.lastCheckInAt is string && data.lastCheckInAt.size() >= 1 && data.lastCheckInAt.size() <= 40 &&
+      data.missedCheckInCount is int && data.missedCheckInCount >= 0 && data.missedCheckInCount <= 1000 &&
+      data.status in ['active', 'checkin_missed', 'completed', 'escalated'] &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    // Private User Profile Document
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow list: if false;
+
+      allow create: if isValidId(userId)
+        && isVerifiedOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isValidId(userId)
+        && isVerifiedOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'fullName',
+          'email',
+          'phoneNumber',
+          'bloodGroup',
+          'medicalNotes',
+          'homeAddress',
+          'emergencyMessage',
+          'platform',
+          'updatedAt'
+        ]);
+
+      allow delete: if isValidId(userId) && isVerifiedOwner(userId);
+
+      // Trusted Contacts Subcollection
+      match /trustedContacts/{contactId} {
+        allow get: if isValidId(userId) && isValidId(contactId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+
+        allow create: if isValidId(userId)
+          && isValidId(contactId)
+          && isVerifiedOwner(userId)
+          && isValidTrustedContact(incoming(), userId, contactId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && parentUserExists(userId);
+
+        allow update: if isValidId(userId)
+          && isValidId(contactId)
+          && isVerifiedOwner(userId)
+          && isValidTrustedContact(incoming(), userId, contactId)
+          && incoming().id == existing().id
+          && incoming().userId == existing().userId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'name',
+            'phone',
+            'relationship',
+            'priority',
+            'updatedAt'
+          ])
+          && parentUserExists(userId);
+
+        allow delete: if isValidId(userId) && isValidId(contactId) && isVerifiedOwner(userId);
+      }
+
+      // Permanent SOS Alert History Subcollection
+      match /sosAlerts/{alertId} {
+        allow get: if isValidId(userId) && isValidId(alertId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+
+        allow create: if isValidId(userId)
+          && isValidId(alertId)
+          && isVerifiedOwner(userId)
+          && isValidSosAlert(incoming(), userId, alertId)
+          && incoming().status == 'recorded'
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && parentUserExists(userId);
+
+        allow update: if isValidId(userId)
+          && isValidId(alertId)
+          && isVerifiedOwner(userId)
+          && isValidSosAlert(incoming(), userId, alertId)
+          && existing().status != 'resolved'
+          && incoming().status == 'resolved'
+          && incoming().id == existing().id
+          && incoming().userId == existing().userId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          && parentUserExists(userId);
+
+        allow delete: if isValidId(userId) && isValidId(alertId) && isVerifiedOwner(userId);
+      }
+
+      // Journey Monitoring Sessions Subcollection
+      match /journeys/{journeyId} {
+        allow get: if isValidId(userId) && isValidId(journeyId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+
+        allow create: if isValidId(userId)
+          && isValidId(journeyId)
+          && isVerifiedOwner(userId)
+          && isValidJourney(incoming(), userId, journeyId)
+          && incoming().status == 'active'
+          && incoming().missedCheckInCount == 0
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && parentUserExists(userId);
+
+        allow update: if isValidId(userId)
+          && isValidId(journeyId)
+          && isVerifiedOwner(userId)
+          && isValidJourney(incoming(), userId, journeyId)
+          && !(existing().status in ['completed', 'escalated'])
+          && incoming().id == existing().id
+          && incoming().userId == existing().userId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && parentUserExists(userId)
+          && (
+            // Action: Safety Check-In
+            (incoming().status == 'active'
+              && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'lastCheckInAt', 'nextCheckInAt', 'updatedAt']))
+            ||
+            // Action: Mark Missed Check-In
+            (incoming().status == 'checkin_missed'
+              && incoming().missedCheckInCount >= existing().missedCheckInCount
+              && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'missedCheckInCount', 'updatedAt']))
+            ||
+            // Action: Complete or Escalate Journey (Terminal)
+            (incoming().status in ['completed', 'escalated']
+              && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']))
+          );
+
+        allow delete: if isValidId(userId) && isValidId(journeyId) && isVerifiedOwner(userId);
+      }
+    }
+  }
+}
