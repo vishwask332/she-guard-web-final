@@ -400,6 +400,16 @@ export function SosConfirmationModal({
               )}
             </div>
 
+            {contacts.length > 0 && (
+              <a
+                href={buildSmsHref(contacts[0].phone, fullSmsText)}
+                className="w-full min-h-[54px] px-5 py-3 rounded-xl bg-[#6D28D9] hover:bg-[#5B21B6] text-white text-sm font-bold inline-flex items-center justify-center gap-2"
+              >
+                <MessageSquare className="w-5 h-5" />
+                <span>Open SMS to {contacts[0].name}</span>
+              </a>
+            )}
+
             {/* Honest Delivery Notice */}
             <div className="rounded-xl bg-[#FDF2F7] border border-[#FBCFE8] p-3.5 text-xs text-[#831843] leading-relaxed">
               <strong>Important Safety Notice:</strong> Your SOS record has been saved to your
